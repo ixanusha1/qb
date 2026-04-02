@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Query Tool — Execute Query</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <!-- ── Navbar ── -->
+    <nav class="navbar">
+      <a href="index.html" class="brand">⚙ Query Tool</a>
+      <ul class="nav-links">
+        <li><a href="index.html">DB Config</a></li>
+        <li><a href="query-management.html">Queries</a></li>
+        <li><a href="query-execution.html" class="active">Execute</a></li>
+        <li><a href="audit-logs.html">Audit Logs</a></li>
+      </ul>
+    </nav>
+
+    <!-- ── Page Content ── -->
+    <div class="container">
+      <h1 class="page-title">Query Execution</h1>
+
+      <!-- ── Selection Card ── -->
+      <div class="card">
+        <h2 class="card-title">Select and Execute</h2>
+
+        <!-- Alert Box -->
+        <div id="executionAlert" class="alert"></div>
+
+        <div class="form-row">
+          <!-- Step 1: Select DB Type -->
+          <div class="form-group">
+            <label for="dbTypeSelect"> Step 1 — Select Database Type </label>
+            <select id="dbTypeSelect">
+              <option value="">-- Select DB Type --</option>
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+
+          <!-- Step 2: Select Query (filtered by DB Type) -->
+          <div class="form-group">
+            <label for="querySelect"> Step 2 — Select Query </label>
+            <select id="querySelect" disabled>
+              <option value="">-- Select a DB Type first --</option>
+              <!-- Populated after DB type is selected -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Query Preview -->
+        <div id="queryPreviewBox" style="display: none">
+          <div class="form-group">
+            <label>Query Preview</label>
+            <div
+              id="queryPreview"
+              style="
+                background: #f0f2f5;
+                border: 1px solid #d1d9e0;
+                border-radius: 6px;
+                padding: 12px 16px;
+                font-family: &quot;Courier New&quot;, monospace;
+                font-size: 13px;
+                color: #1e3a5f;
+                white-space: pre-wrap;
+                word-break: break-word;
+              "
+            ></div>
+          </div>
+          <div
+            id="queryDescription"
+            style="
+              font-size: 13px;
+              color: #666;
+              margin-bottom: 16px;
+              font-style: italic;
+            "
+          ></div>
+        </div>
+
+        <!-- Page Size Selector -->
+        <div class="form-group" style="max-width: 200px">
+          <label for="pageSizeSelect">Rows Per Page</label>
+          <select id="pageSizeSelect">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+
+        <!-- Execute Button -->
+        <div class="btn-group">
+          <button class="btn btn-success" id="executeBtn" disabled>
+            ▶ Execute Query
+          </button>
+          <button class="btn btn-secondary" id="resetBtn">Reset</button>
+        </div>
+      </div>
+
+      <!-- ── Results Card ── -->
+      <div class="card" id="resultsCard" style="display: none">
+        <h2 class="card-title">Query Results</h2>
+
+        <!-- Result Summary -->
+        <div
+          id="resultSummary"
+          style="
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 16px;
+            display: flex;
+            gap: 24px;
+          "
+        ></div>
+
+        <!-- Spinner -->
+        <div id="resultsSpinner" class="spinner">Executing query...</div>
+
+        <!-- Table -->
+        <div
+          class="table-wrapper"
+          id="resultsTableWrapper"
+          style="display: none"
+        >
+          <table>
+            <thead id="resultsTableHead"></thead>
+            <tbody id="resultsTableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Empty State -->
+        <div id="resultsEmptyState" class="empty-state" style="display: none">
+          Query returned no results.
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="pagination" style="display: none">
+          <button id="prevBtn" disabled>← Prev</button>
+          <span id="pageInfo"></span>
+          <button id="nextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/query-execution.js"></script>
+  </body>
+</html>

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Query Tool — Query Management</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <!-- ── Navbar ── -->
+    <nav class="navbar">
+      <a href="index.html" class="brand">⚙ Query Tool</a>
+      <ul class="nav-links">
+        <li><a href="index.html">DB Config</a></li>
+        <li><a href="query-management.html" class="active">Queries</a></li>
+        <li><a href="query-execution.html">Execute</a></li>
+        <li><a href="audit-logs.html">Audit Logs</a></li>
+      </ul>
+    </nav>
+
+    <!-- ── Page Content ── -->
+    <div class="container">
+      <h1 class="page-title">Query Management</h1>
+
+      <!-- ── Add Query Form Card ── -->
+      <div class="card">
+        <h2 class="card-title">Add New Query</h2>
+
+        <!-- Alert Box -->
+        <div id="formAlert" class="alert"></div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="queryName">Query Name</label>
+            <input
+              type="text"
+              id="queryName"
+              placeholder="e.g. All Employees"
+            />
+          </div>
+          <div class="form-group">
+            <label for="dbType">Database Type</label>
+            <select id="dbType">
+              <option value="">-- Select Type --</option>
+              <!-- Populated dynamically from saved configs -->
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="description"
+            >Description
+            <span style="color: #999; font-weight: 400">(optional)</span></label
+          >
+          <input
+            type="text"
+            id="description"
+            placeholder="e.g. Fetches all records from the employees table"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="queryText">SQL Query</label>
+          <textarea
+            id="queryText"
+            placeholder="e.g. SELECT * FROM employees"
+            rows="5"
+          ></textarea>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-primary" id="saveQueryBtn">Save Query</button>
+          <button class="btn btn-secondary" id="clearBtn">Clear</button>
+        </div>
+      </div>
+
+      <!-- ── Saved Queries Table Card ── -->
+      <div class="card">
+        <h2 class="card-title">Saved Queries</h2>
+
+        <!-- Filter by DB Type -->
+        <div class="form-group" style="max-width: 260px; margin-bottom: 20px">
+          <label for="filterDbType">Filter by DB Type</label>
+          <select id="filterDbType">
+            <option value="">-- All Types --</option>
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+
+        <!-- Alert Box -->
+        <div id="tableAlert" class="alert"></div>
+
+        <!-- Spinner -->
+        <div id="tableSpinner" class="spinner">Loading queries...</div>
+
+        <!-- Table -->
+        <div class="table-wrapper" id="tableWrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>DB Type</th>
+                <th>Query Preview</th>
+                <th>Created At</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="queryTableBody">
+              <!-- Filled by query-management.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display: none">
+          No queries saved yet. Add one above.
+        </div>
+      </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/query-management.js"></script>
+  </body>
+</html>
