@@ -40,6 +40,12 @@ async function deleteDbConfig(id) {
   return response;
 }
 
+// Fetch all configs for a given db_type — for Step 2 dropdown
+async function getConfigsByDbType(dbType) {
+  const response = await fetch(`${BASE_URL}/db-config/by-type?dbType=${dbType}`);
+  return response.json();
+}
+
 // ─────────────────────────────────────────
 // QUERY APIs
 // ─────────────────────────────────────────
@@ -83,6 +89,15 @@ async function executeQuery(data) {
   return response.json();
 }
 
+async function executeTempQuery(data) {
+  const response = await fetch(`${BASE_URL}/execute/temp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return response.json();
+}
+
 // ─────────────────────────────────────────
 // AUDIT LOG APIs
 // ─────────────────────────────────────────
@@ -95,6 +110,20 @@ async function getAllAuditLogs() {
 async function getAuditLogsByDbType(dbType) {
   const response = await fetch(
     `${BASE_URL}/audit-logs/by-type?dbType=${dbType}`,
+  );
+  return response.json();
+}
+
+// Fetch all tables from a client DB — for query builder
+async function getSchemaTables(configId) {
+  const response = await fetch(`${BASE_URL}/schema/tables?configId=${configId}`);
+  return response.json();
+}
+
+// Fetch all columns for a given table — for query builder
+async function getSchemaColumns(configId, tableName) {
+  const response = await fetch(
+      `${BASE_URL}/schema/columns?configId=${configId}&table=${encodeURIComponent(tableName)}`
   );
   return response.json();
 }

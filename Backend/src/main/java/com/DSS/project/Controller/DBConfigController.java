@@ -61,6 +61,11 @@ public class DBConfigController {
         return ResponseEntity.ok(dbConfigService.getAllDbTypes());
     }
 
+    @GetMapping("/by-type")
+    public ResponseEntity<List<DBConfig>> getConfigsByDbType(@RequestParam String dbType) {
+        return ResponseEntity.ok(dbConfigService.getConfigsByDbType(dbType));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteConfig(@PathVariable Integer id) {
         dbConfigService.deleteConfig(id);

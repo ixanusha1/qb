@@ -2,12 +2,11 @@ package com.DSS.project.DTO;
 
 import lombok.Data;
 
-// For query execution
 @Data
-public class ExecutionRequest {
+public class TempExecutionRequest {
 
-    private Integer queryId;
     private Integer configId;
+    private String  queryText;
     private Integer page;
     private Integer pageSize;
 }

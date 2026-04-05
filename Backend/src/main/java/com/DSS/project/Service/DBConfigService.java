@@ -91,6 +91,30 @@ public class DBConfigService {
                         "No configuration found for DB type: " + dbType));
     }
 
+    // Fetch one config by ID — used during execution
+    public DBConfig getConfigById(Integer configId) {
+        if (configId == null || configId <= 0) {
+            throw new InvalidQueryException(
+                    "Invalid config ID. Must be a positive integer.");
+        }
+        return dbConfigRepository.findById(configId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No configuration found with ID: " + configId));
+    }
+
+    // Fetch all configs for a given db_type — for Step 2 dropdown
+    public List<DBConfig> getConfigsByDbType(String dbType) {
+        if (dbType == null || dbType.isBlank()) {
+            throw new InvalidQueryException("DB type cannot be empty.");
+        }
+        List<DBConfig> configs = dbConfigRepository.findAllByDbType(dbType.toUpperCase());
+        if (configs.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "No configurations found for DB type: " + dbType);
+        }
+        return configs;
+    }
+
     // Builds JDBC URL based on the type of database
     public String buildUrl(String dbType, String host, Integer port, String databaseName) {
         return switch (dbType.toUpperCase()) {
