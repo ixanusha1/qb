@@ -24,25 +24,27 @@ function hideAlert() {
 }
 
 // ─────────────────────────────────────────
-// Load DB Types into Filter Dropdown
+// To populate filter dropdown from loaded logs
+// It helps to avoid dependency on db_config table
 // ─────────────────────────────────────────
-async function loadDbTypes() {
-  try {
-    const types = await getAllDbTypes();
+function populateFilterFromLogs(logs) {
+  const existingValue = filterDbType.value;   // preserve current selection
 
-    filterDbType.innerHTML = '<option value="">-- All Types --</option>';
+  // Extract distinct db types from logs
+  const types = [...new Set(logs.map(log => log.dbType))].sort();
 
-    if (!Array.isArray(types) || types.length === 0) return;
+  filterDbType.innerHTML = '<option value="">-- All Types --</option>';
 
-    types.forEach((type) => {
-      const option = document.createElement("option");
-      option.value = type;
-      option.textContent = type;
-      filterDbType.appendChild(option);
-    });
-  } catch (err) {
-    // Non-critical — filter just won't have options
-    console.error("Failed to load DB types for filter:", err);
+  types.forEach(type => {
+    const opt       = document.createElement('option');
+    opt.value       = type;
+    opt.textContent = type;
+    filterDbType.appendChild(opt);
+  });
+
+  // Restore previous selection if it still exists
+  if (existingValue && types.includes(existingValue)) {
+    filterDbType.value = existingValue;
   }
 }
 
@@ -50,41 +52,50 @@ async function loadDbTypes() {
 // Load and Render Audit Logs
 // ─────────────────────────────────────────
 async function loadLogs() {
-  tableSpinner.classList.add("show");
-  tableWrapper.style.display = "none";
-  emptyState.style.display = "none";
-  logSummary.style.display = "none";
+  tableSpinner.classList.add('show');
+  tableWrapper.style.display  = 'none';
+  emptyState.style.display    = 'none';
+  logSummary.style.display    = 'none';
   hideAlert();
 
   try {
-    const selectedType = filterDbType.value;
+    // Always fetch ALL logs first
+    const allLogs = await getAllAuditLogs();
 
-    // Fetch filtered or all logs
-    const logs = selectedType
-      ? await getAuditLogsByDbType(selectedType)
-      : await getAllAuditLogs();
-
-    if (!Array.isArray(logs) || logs.length === 0) {
-      emptyState.style.display = "block";
+    if (!Array.isArray(allLogs)) {
+      showAlert('Failed to load audit logs.', 'alert-error');
       return;
     }
 
-    // Show summary
+    // Populate filter from actual log data
+    populateFilterFromLogs(allLogs);
+
+    // Apply current filter
+    const selectedType = filterDbType.value;
+    const logs = selectedType
+        ? allLogs.filter(log => log.dbType === selectedType)
+        : allLogs;
+
+    if (logs.length === 0) {
+      emptyState.style.display = 'block';
+      return;
+    }
+
     logSummary.innerHTML = `
-            ⚠️ <strong>${logs.length}</strong> failure${logs.length > 1 ? "s" : ""} logged
-            ${selectedType ? ` for <strong>${selectedType}</strong>` : " across all DB types"}.
+            ⚠️ <strong>${logs.length}</strong> failure${logs.length > 1 ? 's' : ''} logged
+            ${selectedType
+        ? ` for <strong>${selectedType}</strong>`
+        : ' across all DB types'}.
         `;
-    logSummary.style.display = "block";
+    logSummary.style.display = 'block';
 
     renderTable(logs);
-    tableWrapper.style.display = "block";
+    tableWrapper.style.display = 'block';
+
   } catch (err) {
-    showAlert(
-      "Failed to load audit logs. Is the backend running?",
-      "alert-error",
-    );
+    showAlert('Failed to load audit logs. Is the backend running?', 'alert-error');
   } finally {
-    tableSpinner.classList.remove("show");
+    tableSpinner.classList.remove('show');
   }
 }
 
@@ -207,8 +218,8 @@ refreshBtn.addEventListener("click", () => {
 // Init — Load everything on page load
 // ─────────────────────────────────────────
 async function init() {
-  await loadDbTypes();
-  await loadLogs();
+  // await loadDbTypes();
+  await loadLogs(); // loadDbTypes is not required since filter is built from logs
 }
 
 init();
