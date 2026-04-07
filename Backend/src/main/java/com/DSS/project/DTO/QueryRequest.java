@@ -10,4 +10,5 @@ public class QueryRequest {
     private String description;
     private String queryText;
     private String dbType;
+    private Integer configId;
 }

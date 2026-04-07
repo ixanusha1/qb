@@ -1,6 +1,7 @@
 package com.DSS.project.Service;
 
 import com.DSS.project.DTO.QueryRequest;
+import com.DSS.project.Entity.DBConfig;
 import com.DSS.project.Entity.SavedQuery;
 import com.DSS.project.Exception.InvalidQueryException;
 import com.DSS.project.Exception.ResourceNotFoundException;
@@ -19,6 +20,7 @@ public class QueryService {
 
     private final QueryRepository queryRepository;
     private final AuditLogService auditLogService;
+    private final DBConfigService dbConfigService;
 
     public SavedQuery saveQuery(QueryRequest request) {
 
@@ -37,6 +39,9 @@ public class QueryService {
         }
         if (request.getDbType() == null || request.getDbType().isBlank()) {
             throw new InvalidQueryException("DB type cannot be empty.");
+        }
+        if (request.getConfigId() == null || request.getConfigId() <= 0) {
+            throw new InvalidQueryException("Default connection is required.");
         }
 
         // Stage 1 — For validation syntax using JSQLParser
@@ -85,12 +90,20 @@ public class QueryService {
                     "A query with the name '" + request.getName() + "' already exists.");
         }
 
+        // Validate default connection exists and matches dbType
+        DBConfig config = dbConfigService.getConfigById(request.getConfigId());
+        if (!config.getDbType().equalsIgnoreCase(request.getDbType())) {
+            throw new InvalidQueryException(
+                    "Default connection DB type does not match the query DB type.");
+        }
+
         // Saves the query to database if all the above stages are validated with no errors
         SavedQuery query = new SavedQuery();
         query.setName(request.getName());
         query.setDescription(request.getDescription());
         query.setQueryText(request.getQueryText());
         query.setDbType(request.getDbType().toUpperCase());
+        query.setConfigId(config.getConfigId());
 
         return queryRepository.save(query);
     }
