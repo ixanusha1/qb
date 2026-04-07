@@ -41,7 +41,7 @@ public class QueryService {
             throw new InvalidQueryException("DB type cannot be empty.");
         }
         if (request.getConfigId() == null || request.getConfigId() <= 0) {
-            throw new InvalidQueryException("Default connection is required.");
+            throw new InvalidQueryException("Default execution connection is required.");
         }
 
         // Stage 1 — For validation syntax using JSQLParser

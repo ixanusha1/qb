@@ -43,6 +43,7 @@ let testRunPaginationEl;
 let testRunPrevBtnEl;
 let testRunNextBtnEl;
 let testRunPageInfoEl;
+let testRunSuccessful = false;
 
 let tableAlert;
 let tableSpinner;
@@ -270,7 +271,11 @@ async function loadTestConnections(dbType) {
 
 function updateTestRunBtn() {
   testRunBtnEl.disabled = !(
-    testConnectionEl.value && queryTextArea.value.trim()
+    testConnectionEl.value &&
+    queryTextArea.value.trim() &&
+    queryNameInput.value.trim() &&
+    descriptionInput.value.trim() &&
+    dbTypeSelect.value
   );
 }
 
@@ -283,6 +288,10 @@ function resetTestRunResults() {
   testRunPaginationEl.style.display = "none";
   testRunTableHeadEl.innerHTML = "";
   testRunTableBodyEl.innerHTML = "";
+  testRunSuccessful = false;
+  if (saveQueryBtn) saveQueryBtn.classList.add("is-hidden");
+  if (testRunBtnEl) testRunBtnEl.classList.remove("is-hidden");
+  if (clearBtn) clearBtn.classList.remove("is-hidden");
 }
 
 function resetTestRun() {
@@ -692,7 +701,13 @@ export function initQueryManagementPage() {
   if (!queryNameInput) return;
 
   [queryNameInput, descriptionInput, queryTextArea].forEach((el) => {
-    el.addEventListener("input", saveFormState);
+    el.addEventListener("input", () => {
+      saveFormState();
+      if (testRunSuccessful) {
+        resetTestRunResults();
+      }
+      updateTestRunBtn();
+    });
   });
 
   builderToggle.addEventListener("click", () => {
@@ -711,9 +726,15 @@ export function initQueryManagementPage() {
     if (!dbTypeSelect.value) return;
 
     await loadTestConnections(dbTypeSelect.value);
+    updateTestRunBtn();
   });
 
-  testConnectionEl.addEventListener("change", updateTestRunBtn);
+  testConnectionEl.addEventListener("change", () => {
+    if (testRunSuccessful) {
+      resetTestRunResults();
+    }
+    updateTestRunBtn();
+  });
   queryTextArea.addEventListener("input", () => {
     saveFormState();
     updateTestRunBtn();
@@ -765,10 +786,15 @@ export function initQueryManagementPage() {
         pageSize: 10
       });
 
-      if (result.error) {
-        showAlert(testRunAlertEl, result.error, "alert-error");
-        return;
-      }
+        const errorMessage = result.error || result.message;
+        if (errorMessage) {
+            showAlert(testRunAlertEl, errorMessage, "alert-error");
+            testRunSuccessful = false;
+            if (saveQueryBtn) saveQueryBtn.classList.add("is-hidden");
+            if (testRunBtnEl) testRunBtnEl.classList.remove("is-hidden");
+            if (clearBtn) clearBtn.classList.remove("is-hidden");
+            return;
+        }
 
       testRunTotalPages = result.totalPages;
 
@@ -778,7 +804,11 @@ export function initQueryManagementPage() {
         &nbsp; Page: ${result.page + 1} of ${result.totalPages}
         &nbsp; Columns: ${result.columns.length}
       `;
-      testRunSummaryEl.style.display = "block";
+        testRunSummaryEl.style.display = "block";
+        testRunSuccessful = true;
+        if (saveQueryBtn) saveQueryBtn.classList.remove("is-hidden");
+        if (testRunBtnEl) testRunBtnEl.classList.add("is-hidden");
+        if (clearBtn) clearBtn.classList.add("is-hidden");
 
       if (!result.rows || result.rows.length === 0) {
         testRunEmptyStateEl.style.display = "block";
@@ -799,6 +829,10 @@ export function initQueryManagementPage() {
         "Test run failed. Check your query and connection.",
         "alert-error"
       );
+      testRunSuccessful = false;
+      if (saveQueryBtn) saveQueryBtn.classList.add("is-hidden");
+      if (testRunBtnEl) testRunBtnEl.classList.remove("is-hidden");
+      if (clearBtn) clearBtn.classList.remove("is-hidden");
     } finally {
       testRunSpinnerEl.classList.remove("show");
     }
@@ -811,7 +845,8 @@ export function initQueryManagementPage() {
       name: queryNameInput.value.trim(),
       dbType: dbTypeSelect.value.trim(),
       description: descriptionInput.value.trim(),
-      queryText: queryTextArea.value.trim()
+      queryText: queryTextArea.value.trim(),
+      configId: testConnectionEl.value ? parseInt(testConnectionEl.value, 10) : null
     };
 
     if (!data.name) {
@@ -826,6 +861,14 @@ export function initQueryManagementPage() {
     }
     if (!data.dbType) {
       showAlert(formAlert, "Please select a database type.", "alert-error");
+      return;
+    }
+    if (!data.configId) {
+      showAlert(
+        formAlert,
+        "Please select a default execution connection.",
+        "alert-error"
+      );
       return;
     }
     if (!data.queryText) {
@@ -849,7 +892,9 @@ export function initQueryManagementPage() {
         resetForm();
         await loadQueries();
       } else {
-        showAlert(formAlert, result.error || "Failed to save query.", "alert-error");
+        const message =
+          result.error || result.message || "Failed to save query.";
+        showAlert(formAlert, message, "alert-error");
       }
     } catch (err) {
       showAlert(formAlert, "Something went wrong. Please try again.", "alert-error");

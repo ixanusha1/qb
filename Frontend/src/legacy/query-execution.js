@@ -61,8 +61,6 @@ let step3Indicator;
 let line1;
 let line2;
 
-let scratchpadToggle;
-let scratchpadBody;
 let scratchDbType;
 let scratchConnection;
 let scratchQuery;
@@ -103,31 +101,38 @@ function hideSavedAlert() {
 }
 
 function showScratchAlert(message, type) {
+  if (!scratchpadAlert) return;
   scratchpadAlert.textContent = message;
   scratchpadAlert.className = `alert ${type} show`;
 }
 
 function hideScratchAlert() {
+  if (!scratchpadAlert) return;
   scratchpadAlert.className = "alert";
   scratchpadAlert.textContent = "";
 }
 
 function updateSteps(completedSteps) {
-  [step1Indicator, step2Indicator, step3Indicator].forEach((el, i) => {
+  const steps = [step1Indicator, step2Indicator, step3Indicator].filter(Boolean);
+  steps.forEach((el, i) => {
     el.classList.remove("active", "done");
     if (i < completedSteps) el.classList.add("done");
     else if (i === completedSteps) el.classList.add("active");
   });
-  line1.classList.toggle("done", completedSteps >= 2);
-  line2.classList.toggle("done", completedSteps >= 3);
+  if (line1) line1.classList.toggle("done", completedSteps >= 2);
+  if (line2) line2.classList.toggle("done", completedSteps >= 3);
 }
 
 async function loadDbTypes() {
   try {
     const types = await getAllDbTypes();
 
-    dbTypeSelect.innerHTML = '<option value="">-- Select DB Type --</option>';
-    scratchDbType.innerHTML = '<option value="">-- Select DB Type --</option>';
+    if (dbTypeSelect) {
+      dbTypeSelect.innerHTML = '<option value="">-- Select DB Type --</option>';
+    }
+    if (scratchDbType) {
+      scratchDbType.innerHTML = '<option value="">-- Select DB Type --</option>';
+    }
 
     if (!Array.isArray(types) || types.length === 0) {
       showAlert(
@@ -141,12 +146,16 @@ async function loadDbTypes() {
       const opt1 = document.createElement("option");
       opt1.value = type;
       opt1.textContent = type;
-      dbTypeSelect.appendChild(opt1);
+      if (dbTypeSelect) {
+        dbTypeSelect.appendChild(opt1);
+      }
 
       const opt2 = document.createElement("option");
       opt2.value = type;
       opt2.textContent = type;
-      scratchDbType.appendChild(opt2);
+      if (scratchDbType) {
+        scratchDbType.appendChild(opt2);
+      }
 
     });
   } catch (err) {
@@ -176,30 +185,18 @@ async function loadSavedQueries() {
 
 function buildSavedRows(queries, configs) {
   if (!Array.isArray(queries)) return [];
-  const configsByType = new Map();
+  const configsById = new Map();
 
   if (Array.isArray(configs)) {
     configs.forEach((config) => {
-      if (!configsByType.has(config.dbType)) {
-        configsByType.set(config.dbType, []);
-      }
-      configsByType.get(config.dbType).push(config);
+      configsById.set(config.configId, config);
     });
   }
 
-  const rows = [];
-  queries.forEach((query) => {
-    const configsForType = configsByType.get(query.dbType) || [];
-    if (configsForType.length === 0) {
-      rows.push({ query, config: null });
-      return;
-    }
-    configsForType.forEach((config) => {
-      rows.push({ query, config });
-    });
-  });
-
-  return rows;
+  return queries.map((query) => ({
+    query,
+    config: query.configId ? configsById.get(query.configId) || null : null
+  }));
 }
 
 function getSavedFilteredRows() {
@@ -432,6 +429,7 @@ function resetResults() {
 }
 
 function resetScratchResults() {
+  if (!scratchResultsArea) return;
   scratchResultsArea.style.display = "none";
   scratchTableHead.innerHTML = "";
   scratchTableBody.innerHTML = "";
@@ -463,8 +461,9 @@ async function runExecution() {
       pageSize: currentPageSize
     });
 
-    if (result.error) {
-      showAlert(result.error, "alert-error");
+    const errorMessage = result.error || result.message;
+    if (errorMessage) {
+      showAlert(errorMessage, "alert-error");
       resultsCard.style.display = "none";
       return;
     }
@@ -523,8 +522,9 @@ async function runScratchQuery() {
       pageSize: parseInt(scratchPageSizeEl.value, 10)
     });
 
-    if (result.error) {
-      showScratchAlert(result.error, "alert-error");
+    const scratchError = result.error || result.message;
+    if (scratchError) {
+      showScratchAlert(scratchError, "alert-error");
       scratchResultsArea.style.display = "none";
       return;
     }
@@ -598,8 +598,6 @@ export function initQueryExecutionPage() {
   line1 = document.getElementById("line1");
   line2 = document.getElementById("line2");
 
-  scratchpadToggle = document.getElementById("scratchpadToggle");
-  scratchpadBody = document.getElementById("scratchpadBody");
   scratchDbType = document.getElementById("scratchDbType");
   scratchConnection = document.getElementById("scratchConnection");
   scratchQuery = document.getElementById("scratchQuery");
@@ -619,15 +617,15 @@ export function initQueryExecutionPage() {
   scratchPageInfo = document.getElementById("scratchPageInfo");
   scratchpadAlert = document.getElementById("scratchpadAlert");
 
-  if (!dbTypeSelect) return;
-
   updateSteps(0);
 
-  savedSearchInput.addEventListener("input", () => {
-    renderSavedTable(getSavedFilteredRows());
-  });
+  if (savedSearchInput) {
+    savedSearchInput.addEventListener("input", () => {
+      renderSavedTable(getSavedFilteredRows());
+    });
+  }
 
-  dbTypeSelect.addEventListener("change", async () => {
+  if (dbTypeSelect) dbTypeSelect.addEventListener("change", async () => {
     hideAlert();
     resetQuerySelection();
     resetResults();
@@ -674,7 +672,7 @@ export function initQueryExecutionPage() {
     }
   });
 
-  connectionSelect.addEventListener("change", async () => {
+  if (connectionSelect) connectionSelect.addEventListener("change", async () => {
     hideAlert();
     resetQuerySelection();
     resetResults();
@@ -717,12 +715,12 @@ export function initQueryExecutionPage() {
     }
   });
 
-  querySearchInput.addEventListener("input", () => {
+  if (querySearchInput) querySearchInput.addEventListener("input", () => {
     const term = querySearchInput.value.trim().toLowerCase();
     renderSearchResults(term);
   });
 
-  querySearchInput.addEventListener("focus", () => {
+  if (querySearchInput) querySearchInput.addEventListener("focus", () => {
     if (allQueriesForType.length > 0) {
       renderSearchResults(querySearchInput.value.trim().toLowerCase());
     }
@@ -730,16 +728,18 @@ export function initQueryExecutionPage() {
 
   document.addEventListener("click", (e) => {
     if (!e.target.closest("#querySearchWrapper")) {
-      querySearchResults.classList.remove("open");
+      if (querySearchResults) {
+        querySearchResults.classList.remove("open");
+      }
     }
   });
 
-  clearQueryBtn.addEventListener("click", () => {
+  if (clearQueryBtn) clearQueryBtn.addEventListener("click", () => {
     resetQuerySelection();
     updateSteps(2);
   });
 
-  pageSizeSelect.addEventListener("change", () => {
+  if (pageSizeSelect) pageSizeSelect.addEventListener("change", () => {
     currentPageSize = parseInt(pageSizeSelect.value, 10);
     if (selectedQueryId && selectedConfigId) {
       currentPage = 0;
@@ -747,27 +747,27 @@ export function initQueryExecutionPage() {
     }
   });
 
-  executeBtn.addEventListener("click", () => {
+  if (executeBtn) executeBtn.addEventListener("click", () => {
     currentPage = 0;
     currentPageSize = parseInt(pageSizeSelect.value, 10);
     runExecution();
   });
 
-  prevBtn.addEventListener("click", () => {
+  if (prevBtn) prevBtn.addEventListener("click", () => {
     if (currentPage > 0) {
       currentPage--;
       runExecution();
     }
   });
 
-  nextBtn.addEventListener("click", () => {
+  if (nextBtn) nextBtn.addEventListener("click", () => {
     if (currentPage < totalPages - 1) {
       currentPage++;
       runExecution();
     }
   });
 
-  resetBtn.addEventListener("click", () => {
+  if (resetBtn) resetBtn.addEventListener("click", () => {
     dbTypeSelect.value = "";
     connectionSelect.innerHTML = '<option value="">-- Select a DB Type first --</option>';
     connectionSelect.disabled = true;
@@ -782,12 +782,8 @@ export function initQueryExecutionPage() {
     updateSteps(0);
   });
 
-  scratchpadToggle.addEventListener("click", () => {
-    scratchpadToggle.classList.toggle("open");
-    scratchpadBody.classList.toggle("open");
-  });
 
-  scratchDbType.addEventListener("change", async () => {
+  if (scratchDbType) scratchDbType.addEventListener("change", async () => {
     hideScratchAlert();
     scratchConnection.innerHTML = '<option value="">-- Loading... --</option>';
     scratchConnection.disabled = true;
@@ -823,7 +819,7 @@ export function initQueryExecutionPage() {
     }
   });
 
-  scratchConnection.addEventListener("change", () => {
+  if (scratchConnection) scratchConnection.addEventListener("change", () => {
     scratchConfigId = scratchConnection.value
       ? parseInt(scratchConnection.value, 10)
       : null;
@@ -831,27 +827,27 @@ export function initQueryExecutionPage() {
     resetScratchResults();
   });
 
-  scratchRunBtn.addEventListener("click", () => {
+  if (scratchRunBtn) scratchRunBtn.addEventListener("click", () => {
     scratchPage = 0;
     scratchPageSize = parseInt(scratchPageSizeEl.value || 50, 10);
     runScratchQuery();
   });
 
-  scratchPrevBtn.addEventListener("click", () => {
+  if (scratchPrevBtn) scratchPrevBtn.addEventListener("click", () => {
     if (scratchPage > 0) {
       scratchPage--;
       runScratchQuery();
     }
   });
 
-  scratchNextBtn.addEventListener("click", () => {
+  if (scratchNextBtn) scratchNextBtn.addEventListener("click", () => {
     if (scratchPage < scratchTotalPages - 1) {
       scratchPage++;
       runScratchQuery();
     }
   });
 
-  scratchClearBtn.addEventListener("click", () => {
+  if (scratchClearBtn) scratchClearBtn.addEventListener("click", () => {
     scratchDbType.value = "";
     scratchConnection.innerHTML = '<option value="">-- Select DB Type first --</option>';
     scratchConnection.disabled = true;

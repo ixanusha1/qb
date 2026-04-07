@@ -136,7 +136,7 @@ export default function QueryManagementPage() {
         <h2 className="card-title">Add New Query</h2>
         <div id="formAlert" className="alert"></div>
 
-        <div className="form-row">
+        <div className="form-row form-row-3">
           <div className="form-group">
             <label htmlFor="queryName">Query Name</label>
             <input
@@ -151,27 +151,27 @@ export default function QueryManagementPage() {
               <option value="">-- Select Type --</option>
             </select>
           </div>
-        </div>
-        <div
-          className="form-group"
-          id="testConnectionGroup"
-          style={{ display: "none" }}
-        >
-          <label htmlFor="testConnection">
-            Test Connection
-            <span className="form-hint">- required for test run</span>
-          </label>
-          <select id="testConnection">
-            <option value="">-- Select Connection --</option>
-          </select>
+          <div
+            className="form-group"
+            id="testConnectionGroup"
+            style={{ display: "none" }}
+          >
+            <label htmlFor="testConnection">
+              Test Connection
+              <span className="form-hint">- required for test run</span>
+            </label>
+            <select id="testConnection">
+              <option value="">-- Select Connection --</option>
+            </select>
+          </div>
         </div>
         <div className="form-group">
           <label htmlFor="description">Description</label>
-          <input
-            type="text"
+          <textarea
             id="description"
+            rows="3"
             placeholder="e.g. Fetches all records from employees table"
-          />
+          ></textarea>
         </div>
 
         <div className="form-group">
@@ -184,13 +184,10 @@ export default function QueryManagementPage() {
         </div>
 
         <div className="btn-group">
-          <button className="btn btn-primary" id="saveQueryBtn">
-            Save Query
-          </button>
-          <button className="btn btn-success" id="testRunBtn" disabled>
+          <button className="btn btn-success fade-toggle" id="testRunBtn" disabled>
             Run Test
           </button>
-          <button className="btn btn-secondary" id="clearBtn">
+          <button className="btn btn-secondary fade-toggle" id="clearBtn">
             Clear
           </button>
         </div>
@@ -234,6 +231,15 @@ export default function QueryManagementPage() {
             </button>
             <span id="testRunPageInfo"></span>
             <button id="testRunNextBtn">Next</button>
+          </div>
+
+          <div className="btn-group" style={{ marginTop: 12 }}>
+            <button
+              className="btn btn-primary fade-toggle is-hidden"
+              id="saveQueryBtn"
+            >
+              Save Query
+            </button>
           </div>
         </div>
       </div>

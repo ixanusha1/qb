@@ -94,8 +94,9 @@ async function runExecution() {
       pageSize: currentPageSize
     });
 
-    if (result.error) {
-      showAlert(result.error, "alert-error");
+    const errorMessage = result.error || result.message;
+    if (errorMessage) {
+      showAlert(errorMessage, "alert-error");
       resultsCard.style.display = "none";
       return;
     }
