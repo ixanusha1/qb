@@ -3,6 +3,7 @@ import {
   executeTempQuery,
   getAllDbTypes,
   getAllQueries,
+  getAllDbConfigs,
   getConfigsByDbType
 } from "./api.js";
 
@@ -18,7 +19,7 @@ let scratchPage = 0;
 let scratchTotalPages = 0;
 let scratchPageSize = 50;
 let scratchConfigId = null;
-let savedQueries = [];
+let savedRows = [];
 
 let dbTypeSelect;
 let connectionSelect;
@@ -47,8 +48,6 @@ let nextBtn;
 let pageInfo;
 
 let savedSearchInput;
-let savedFilterDbType;
-let savedConnectionSelect;
 let savedTableAlert;
 let savedTableSpinner;
 let savedTableWrapper;
@@ -129,7 +128,6 @@ async function loadDbTypes() {
 
     dbTypeSelect.innerHTML = '<option value="">-- Select DB Type --</option>';
     scratchDbType.innerHTML = '<option value="">-- Select DB Type --</option>';
-    savedFilterDbType.innerHTML = '<option value="">-- All Types --</option>';
 
     if (!Array.isArray(types) || types.length === 0) {
       showAlert(
@@ -150,10 +148,6 @@ async function loadDbTypes() {
       opt2.textContent = type;
       scratchDbType.appendChild(opt2);
 
-      const opt3 = document.createElement("option");
-      opt3.value = type;
-      opt3.textContent = type;
-      savedFilterDbType.appendChild(opt3);
     });
   } catch (err) {
     showAlert("Failed to load DB types. Is the backend running?", "alert-error");
@@ -167,8 +161,12 @@ async function loadSavedQueries() {
   hideSavedAlert();
 
   try {
-    savedQueries = await getAllQueries();
-    renderSavedTable(getSavedFilteredQueries());
+    const [queries, configs] = await Promise.all([
+      getAllQueries(),
+      getAllDbConfigs()
+    ]);
+    savedRows = buildSavedRows(queries, configs);
+    renderSavedTable(getSavedFilteredRows());
   } catch (err) {
     showSavedAlert("Failed to load queries.", "alert-error");
   } finally {
@@ -176,31 +174,60 @@ async function loadSavedQueries() {
   }
 }
 
-function getSavedFilteredQueries() {
-  const term = savedSearchInput.value.trim().toLowerCase();
-  const typeFilter = savedFilterDbType.value;
+function buildSavedRows(queries, configs) {
+  if (!Array.isArray(queries)) return [];
+  const configsByType = new Map();
 
-  return savedQueries.filter((q) => {
-    const matchesType = typeFilter ? q.dbType === typeFilter : true;
+  if (Array.isArray(configs)) {
+    configs.forEach((config) => {
+      if (!configsByType.has(config.dbType)) {
+        configsByType.set(config.dbType, []);
+      }
+      configsByType.get(config.dbType).push(config);
+    });
+  }
+
+  const rows = [];
+  queries.forEach((query) => {
+    const configsForType = configsByType.get(query.dbType) || [];
+    if (configsForType.length === 0) {
+      rows.push({ query, config: null });
+      return;
+    }
+    configsForType.forEach((config) => {
+      rows.push({ query, config });
+    });
+  });
+
+  return rows;
+}
+
+function getSavedFilteredRows() {
+  const term = savedSearchInput.value.trim().toLowerCase();
+
+  return savedRows.filter((row) => {
+    const { query, config } = row;
     const matchesTerm = term
-      ? q.name.toLowerCase().includes(term) ||
-        (q.description && q.description.toLowerCase().includes(term))
+      ? query.name.toLowerCase().includes(term) ||
+        (query.description && query.description.toLowerCase().includes(term)) ||
+        query.dbType.toLowerCase().includes(term) ||
+        (config && config.dbName && config.dbName.toLowerCase().includes(term))
       : true;
-    return matchesType && matchesTerm;
+    return matchesTerm;
   });
 }
 
-function renderSavedTable(queries) {
+function renderSavedTable(rows) {
   const term = savedSearchInput.value.trim().toLowerCase();
 
   savedQueryTableBody.innerHTML = "";
 
   savedSearchCount.textContent =
-    queries.length === savedQueries.length
-      ? `${savedQueries.length} queries total`
-      : `Showing ${queries.length} of ${savedQueries.length} queries`;
+    rows.length === savedRows.length
+      ? `${savedRows.length} rows total`
+      : `Showing ${rows.length} of ${savedRows.length} rows`;
 
-  if (queries.length === 0) {
+  if (rows.length === 0) {
     savedTableWrapper.style.display = "none";
     savedEmptyState.style.display = "block";
     savedEmptyState.textContent = term
@@ -212,7 +239,8 @@ function renderSavedTable(queries) {
   savedEmptyState.style.display = "none";
   savedTableWrapper.style.display = "block";
 
-  queries.forEach((query, index) => {
+  rows.forEach((rowData, index) => {
+    const { query, config } = rowData;
     const createdAt = query.createdAt
       ? new Date(query.createdAt).toLocaleString()
       : "-";
@@ -238,13 +266,14 @@ function renderSavedTable(queries) {
         : query.description
       : '<span style="color:#999;">-</span>';
 
-    const row = document.createElement("tr");
-    row.className = "saved-query-row";
-    row.innerHTML = `
+    const rowEl = document.createElement("tr");
+    rowEl.className = "saved-query-row";
+    rowEl.innerHTML = `
       <td>${index + 1}</td>
       <td><strong>${highlightedName}</strong></td>
       <td>${description}</td>
       <td><span class="badge badge-info">${query.dbType}</span></td>
+      <td>${config ? config.dbName : "<span style='color:#999;'>No connection</span>"}</td>
       <td>
         <code style="
           background:#f0f2f5;
@@ -262,77 +291,26 @@ function renderSavedTable(queries) {
       </td>
     `;
 
-    row.addEventListener("click", () => handleSavedQueryRun(query));
-    savedQueryTableBody.appendChild(row);
+    rowEl.addEventListener("click", () => handleSavedRowRun(rowData));
+    savedQueryTableBody.appendChild(rowEl);
   });
 }
 
-async function loadSavedConnectionsForType(dbType) {
-  savedConnectionSelect.disabled = true;
-
-  if (!dbType) {
-    savedConnectionSelect.innerHTML =
-      '<option value="">-- Select DB Type first --</option>';
-    return;
-  }
-
-  savedConnectionSelect.innerHTML =
-    '<option value="">-- Loading connections... --</option>';
-
-  try {
-    const configs = await getConfigsByDbType(dbType);
-    savedConnectionSelect.innerHTML =
-      '<option value="">-- Select Connection --</option>';
-
-    if (!Array.isArray(configs) || configs.length === 0) {
-      savedConnectionSelect.innerHTML = `<option value="" disabled>No connections for ${dbType}</option>`;
-      return;
-    }
-
-    configs.forEach((config) => {
-      const opt = document.createElement("option");
-      opt.value = config.configId;
-      opt.textContent = config.dbName;
-      savedConnectionSelect.appendChild(opt);
-    });
-
-    savedConnectionSelect.disabled = false;
-  } catch (err) {
-    savedConnectionSelect.innerHTML = '<option value="">-- Failed to load --</option>';
-    showSavedAlert("Failed to load connections.", "alert-error");
-  }
-}
-
-async function handleSavedQueryRun(query) {
+function handleSavedRowRun(row) {
   hideSavedAlert();
 
-  if (!savedFilterDbType.value || savedFilterDbType.value !== query.dbType) {
-    savedFilterDbType.value = query.dbType;
-    await loadSavedConnectionsForType(query.dbType);
-  }
-
-  if (!savedConnectionSelect.value) {
-    const validOptions = [...savedConnectionSelect.options].filter(
-      (opt) => opt.value
+  if (!row.config) {
+    showSavedAlert(
+      `No execution connection available for ${row.query.dbType}.`,
+      "alert-info"
     );
-    if (validOptions.length === 1) {
-      savedConnectionSelect.value = validOptions[0].value;
-    } else {
-      showSavedAlert("Select an execution connection before running.", "alert-info");
-      return;
-    }
-  }
-
-  const configId = parseInt(savedConnectionSelect.value, 10);
-  if (!configId) {
-    showSavedAlert("Select a valid connection.", "alert-error");
     return;
   }
 
   const pageSize = parseInt(pageSizeSelect.value, 10) || 50;
   const url = `/query-results?queryId=${encodeURIComponent(
-    query.queryId
-  )}&configId=${encodeURIComponent(configId)}&pageSize=${encodeURIComponent(
+    row.query.queryId
+  )}&configId=${encodeURIComponent(row.config.configId)}&pageSize=${encodeURIComponent(
     pageSize
   )}`;
   window.location.href = url;
@@ -607,8 +585,6 @@ export function initQueryExecutionPage() {
   pageInfo = document.getElementById("pageInfo");
 
   savedSearchInput = document.getElementById("savedSearchInput");
-  savedFilterDbType = document.getElementById("savedFilterDbType");
-  savedConnectionSelect = document.getElementById("savedConnectionSelect");
   savedTableAlert = document.getElementById("savedTableAlert");
   savedTableSpinner = document.getElementById("savedTableSpinner");
   savedTableWrapper = document.getElementById("savedTableWrapper");
@@ -648,13 +624,7 @@ export function initQueryExecutionPage() {
   updateSteps(0);
 
   savedSearchInput.addEventListener("input", () => {
-    renderSavedTable(getSavedFilteredQueries());
-  });
-
-  savedFilterDbType.addEventListener("change", async () => {
-    hideSavedAlert();
-    await loadSavedConnectionsForType(savedFilterDbType.value);
-    renderSavedTable(getSavedFilteredQueries());
+    renderSavedTable(getSavedFilteredRows());
   });
 
   dbTypeSelect.addEventListener("change", async () => {

@@ -51,19 +51,19 @@ export default function QueryExecutionPage() {
             <button className="btn btn-secondary" id="scratchClearBtn">
               Clear
             </button>
-          <div className="form-group inline-field">
-            <label>Rows per page</label>
-            <select
-              id="scratchPageSize"
-              className="page-size-select"
-              defaultValue="50"
-            >
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </select>
-          </div>
+            <div className="form-group inline-field">
+              <label>Rows per page</label>
+              <select
+                id="scratchPageSize"
+                className="page-size-select"
+                defaultValue="50"
+              >
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
           </div>
 
           <div id="scratchResultsArea" style={{ marginTop: 20, display: "none" }}>
@@ -112,21 +112,9 @@ export default function QueryExecutionPage() {
             <input
               type="text"
               id="savedSearchInput"
-              placeholder="Search by name or description..."
+              placeholder="Search by name, description, DB type, or connection..."
               autoComplete="off"
             />
-          </div>
-          <div className="form-group saved-filter">
-            <label htmlFor="savedFilterDbType">Filter by DB Type</label>
-            <select id="savedFilterDbType">
-              <option value="">-- All Types --</option>
-            </select>
-          </div>
-          <div className="form-group saved-filter">
-            <label htmlFor="savedConnectionSelect">Execution Connection</label>
-            <select id="savedConnectionSelect" disabled>
-              <option value="">-- Select DB Type first --</option>
-            </select>
           </div>
         </div>
 
@@ -149,6 +137,7 @@ export default function QueryExecutionPage() {
                 <th>Name</th>
                 <th>Description</th>
                 <th>DB Type</th>
+                <th>Execution Connection</th>
                 <th>Query Preview</th>
                 <th>Created At</th>
                 <th>Action</th>
