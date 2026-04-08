@@ -1,13 +1,16 @@
 import React, { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { initQueryResultsPage } from "../legacy/query-results.js";
 
 export default function QueryResultsPage() {
+  const location = useLocation();
+
   useEffect(() => {
     initQueryResultsPage();
-  }, []);
+  }, [location.search]);
 
   return (
-    <div className="container">
+    <div className="container" key={location.search}>
       <h1 className="page-title">Query Results</h1>
 
       <div className="card">

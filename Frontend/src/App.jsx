@@ -9,8 +9,6 @@ import { initScratchpad } from "./legacy/scratchpad.js";
 import { getAllDbConfigs, getAllQueries } from "./legacy/api.js";
 
 function Navbar() {
-  const linkClass = ({ isActive }) =>
-    isActive ? "active" : undefined;
   const navigate = useNavigate();
 
   const [savedQueries, setSavedQueries] = useState([]);
@@ -161,25 +159,29 @@ function Navbar() {
           ) : null}
         </div>
       </div>
-      <ul className="nav-links">
-        <li>
-          <NavLink to="/" className={linkClass} end>
-            DB Config
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/queries" className={linkClass}>
-            Report Config
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/audit-logs" className={linkClass}>
-            Audit Logs
-          </NavLink>
-        </li>
-      </ul>
 
     </nav>
+  );
+}
+
+function TopNav() {
+  const linkClass = ({ isActive }) =>
+    isActive ? "top-nav-link active" : "top-nav-link";
+
+  return (
+    <header className="top-nav">
+      <div className="top-nav-links">
+        <NavLink to="/" className={linkClass} end>
+          DB Config
+        </NavLink>
+        <NavLink to="/queries" className={linkClass}>
+          Report Config
+        </NavLink>
+        <NavLink to="/audit-logs" className={linkClass}>
+          Audit Logs
+        </NavLink>
+      </div>
+    </header>
   );
 }
 
@@ -191,6 +193,7 @@ export default function App() {
   return (
     <div className="app-shell" id="appShell">
       <div className="app-main">
+        <TopNav />
         <Navbar />
         <Routes>
           <Route path="/" element={<DbConfigPage />} />

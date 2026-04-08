@@ -16,14 +16,55 @@ body {
   min-height: 100vh;
   width: 100%;
   --panel-width: min(35vw, 520px);
-  --sidebar-width: 220px;
+  --sidebar-width: 320px;
   padding-left: var(--sidebar-width);
 }
 
 .app-main {
   flex: 1 1 auto;
   min-width: 0;
+  width: 100%;
   transition: flex-basis 0.3s ease-in-out;
+}
+
+.top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin: 0px 0px 0;
+  padding: 15px 14px;
+  border-radius: 0px;
+  background: linear-gradient(135deg, #ffffff 0%, #f4f8fc 100%);
+  border: 1px solid #dbe6f0;
+  box-shadow: 0 10px 24px rgba(15, 76, 129, 0.08);
+}
+
+.top-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.top-nav-link {
+  color: #24507b;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(29, 112, 184, 0.08);
+  border: 1px solid rgba(29, 112, 184, 0.14);
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.top-nav-link:hover,
+.top-nav-link.active {
+  color: #ffffff;
+  background: #1d70b8;
+  border-color: #1d70b8;
+  transform: translateY(-1px);
 }
 
 .app-shell.panel-open .app-main {
@@ -49,43 +90,19 @@ body {
 
 .sidebar .brand {
   color: #ffffff;
-  font-size: 14px;
+  font-size: 33px;
   font-weight: 700;
   text-decoration: none;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
-}
-
-.sidebar .nav-links {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  list-style: none;
-  margin-top: auto;
-  padding-bottom: 8px;
-}
-
-.sidebar .nav-links a {
-  color: #cbd5f0;
-  text-decoration: none;
-  font-size: 16px;
-  font-weight: 600;
-  padding: 9px 12px;
-  border-radius: 10px;
-  transition: background-color 0.2s, color 0.2s, transform 0.2s;
-}
-
-.sidebar .nav-links a:hover,
-.sidebar .nav-links a.active {
-  color: #ffffff;
-  background-color: rgba(148, 163, 184, 0.18);
-  transform: translateX(2px);
 }
 
 .sidebar-queries {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex: 1;
+  min-height: 0;
 }
 
 .sidebar-section-title {
@@ -113,8 +130,10 @@ body {
 .sidebar-query-list {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 6px;
-  max-height: 40vh;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
   scrollbar-width: none;
@@ -133,6 +152,7 @@ body {
   padding: 10px;
   text-align: left;
   border-radius: 8px;
+  width: 100%;
   transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
 }
 
@@ -153,7 +173,7 @@ body {
   background: none;
   border: none;
   color: #ffffff;
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 700;
   text-align: left;
   cursor: pointer;
@@ -354,6 +374,7 @@ body {
   padding: 28px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   margin-bottom: 28px;
+  overflow: hidden;
 }
 
 .card-title {
@@ -452,7 +473,7 @@ body {
 }
 
 .btn-danger {
-  background-color: #dc3545;
+  background-color: #dc3545bd;
   color: #ffffff;
 }
 
@@ -461,7 +482,7 @@ body {
 }
 
 .btn-success {
-  background-color: #28a745;
+  background-color: #2db407b0;
   color: #ffffff;
 }
 
@@ -1454,21 +1475,23 @@ tbody tr:last-child {
     grid-template-columns: 1fr;
   }
 
-  .sidebar {
-    width: 200px;
-    padding: 16px 12px;
-  }
-
-  .sidebar .nav-links {
-    gap: 6px;
+  .top-nav {
+    justify-content: flex-start;
+    margin: 8px 16px 0;
+    padding: 8px 10px;
   }
 
   .modal-card.side-panel {
     width: min(90vw, 520px);
   }
 
-  .app-shell {
-    padding-left: 200px;
+  .container {
+    margin: 24px auto;
+    padding: 0 16px;
+  }
+
+  .card {
+    padding: 22px 18px;
   }
 
   .app-shell.panel-open .app-main {
@@ -1485,5 +1508,172 @@ tbody tr:last-child {
 
   .app-shell.panel-open .side-panel {
     width: 100%;
+  }
+
+  .saved-filter-row,
+  .saved-queries-row,
+  .filter-row,
+  .inline-row,
+  .btn-group,
+  .page-title-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-title-row .btn {
+    margin-left: 0;
+  }
+
+  .top-nav-links {
+    width: 100%;
+  }
+
+  .top-nav-link {
+    flex: 1 1 160px;
+    text-align: center;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    display: block;
+    padding-left: 0;
+  }
+
+  .sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    min-height: auto;
+    padding: 18px 16px;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: none;
+  }
+
+  .app-main {
+    width: 100%;
+  }
+
+  .sidebar-queries {
+    min-height: auto;
+  }
+
+  .sidebar-query-list {
+    max-height: 340px;
+    min-height: auto;
+    flex: none;
+  }
+
+  .top-nav {
+    margin: 10px 12px 0;
+  }
+
+  .container {
+    margin: 18px auto;
+    padding: 0 12px;
+  }
+
+  .card {
+    padding: 18px 14px;
+    border-radius: 12px;
+  }
+
+  .page-title {
+    font-size: 20px;
+    margin-bottom: 18px;
+  }
+
+  .page-title-row {
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .table-wrapper {
+    border-radius: 10px;
+  }
+
+  thead th,
+  tbody td {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .modal-overlay {
+    padding: 12px;
+  }
+
+  .modal-card,
+  .modal-card.config-modal,
+  .modal-card.query-modal,
+  .modal-card.query-results-modal,
+  .modal-card.results-card {
+    width: 100%;
+    padding: 18px 14px;
+    border-radius: 14px;
+    max-height: 92vh;
+  }
+
+  .fab {
+    right: 16px;
+    bottom: 16px;
+    width: 52px;
+    height: 52px;
+  }
+}
+
+@media (max-width: 520px) {
+  .top-nav {
+    margin: 8px 10px 0;
+    padding: 8px;
+    border-radius: 10px;
+  }
+
+  .top-nav-links {
+    gap: 8px;
+  }
+
+  .top-nav-link {
+    flex: 1 1 100%;
+    font-size: 13px;
+    padding: 9px 12px;
+  }
+
+  .sidebar .brand {
+    font-size: 18px;
+  }
+
+  .sidebar-query-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sidebar-run-btn {
+    align-self: flex-start;
+  }
+
+  .sidebar-query-preview {
+    max-height: none;
+  }
+
+  .meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-row,
+  .pagination {
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+  }
+
+  .search-wrapper input,
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 16px;
   }
 }

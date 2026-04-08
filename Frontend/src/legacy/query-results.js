@@ -37,6 +37,8 @@ function parseParams() {
   queryId = parseInt(params.get("queryId"), 10);
   configId = parseInt(params.get("configId"), 10);
   const size = parseInt(params.get("pageSize"), 10);
+  currentPage = 0;
+  totalPages = 0;
   currentPageSize = Number.isFinite(size) && size > 0 ? size : 50;
 }
 
