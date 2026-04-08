@@ -1,8 +1,8 @@
 import {
-  deleteQuery,
   executeTempQuery,
   getAllDbTypes,
   getAllQueries,
+  getAllDbConfigs,
   getConfigsByDbType,
   getSchemaColumns,
   getSchemaTables,
@@ -19,6 +19,7 @@ let joinCount = 0;
 let whereCount = 0;
 let testRunPage = 0;
 let testRunTotalPages = 0;
+let savedRows = [];
 
 let queryNameInput;
 let dbTypeSelect;
@@ -45,14 +46,13 @@ let testRunNextBtnEl;
 let testRunPageInfoEl;
 let testRunSuccessful = false;
 
-let tableAlert;
-let tableSpinner;
-let queryTableBody;
-let emptyState;
-let tableWrapper;
-let filterDbType;
-let searchInput;
-let searchCount;
+let savedSearchInput;
+let savedTableAlert;
+let savedTableSpinner;
+let savedTableWrapper;
+let savedQueryTableBody;
+let savedEmptyState;
+let savedSearchCount;
 
 let builderToggle;
 let builderBody;
@@ -74,6 +74,9 @@ let builderStep3;
 let builderStep4;
 let builderStep5;
 let builderStep6;
+let queryModalOverlay;
+let openQueryModalBtn;
+let queryModalCloseBtn;
 
 function showAlert(el, message, type) {
   el.textContent = message;
@@ -214,13 +217,12 @@ async function loadDbTypes() {
     const types = await getAllDbTypes();
 
     dbTypeSelect.innerHTML = '<option value="">-- Select Type --</option>';
-    filterDbType.innerHTML = '<option value="">-- All Types --</option>';
     builderDbTypeEl.innerHTML = '<option value="">-- Select DB Type --</option>';
 
     if (!Array.isArray(types) || types.length === 0) return;
 
     types.forEach((type) => {
-      [dbTypeSelect, filterDbType, builderDbTypeEl].forEach((sel) => {
+      [dbTypeSelect, builderDbTypeEl].forEach((sel) => {
         const opt = document.createElement("option");
         opt.value = type;
         opt.textContent = type;
@@ -323,29 +325,92 @@ function renderTestTable(columns, rows) {
   });
 }
 
-function renderTable(queries) {
-  const term = searchInput.value.trim().toLowerCase();
+function showSavedAlert(message, type) {
+  savedTableAlert.textContent = message;
+  savedTableAlert.className = `alert ${type} show`;
+}
 
-  queryTableBody.innerHTML = "";
+function hideSavedAlert() {
+  savedTableAlert.className = "alert";
+  savedTableAlert.textContent = "";
+}
 
-  searchCount.textContent =
-    queries.length === allQueries.length
-      ? `${allQueries.length} queries total`
-      : `Showing ${queries.length} of ${allQueries.length} queries`;
+async function loadSavedQueries() {
+  savedTableSpinner.classList.add("show");
+  savedTableWrapper.style.display = "none";
+  savedEmptyState.style.display = "none";
+  hideSavedAlert();
 
-  if (queries.length === 0) {
-    tableWrapper.style.display = "none";
-    emptyState.style.display = "block";
-    emptyState.textContent = term
+  try {
+    const [queries, configs] = await Promise.all([
+      getAllQueries(),
+      getAllDbConfigs()
+    ]);
+    allQueries = Array.isArray(queries) ? queries : [];
+    savedRows = buildSavedRows(queries, configs);
+    renderSavedTable(getSavedFilteredRows());
+  } catch (err) {
+    showSavedAlert("Failed to load queries.", "alert-error");
+  } finally {
+    savedTableSpinner.classList.remove("show");
+  }
+}
+
+function buildSavedRows(queries, configs) {
+  if (!Array.isArray(queries)) return [];
+  const configsById = new Map();
+
+  if (Array.isArray(configs)) {
+    configs.forEach((config) => {
+      configsById.set(config.configId, config);
+    });
+  }
+
+  return queries.map((query) => ({
+    query,
+    config: query.configId ? configsById.get(query.configId) || null : null
+  }));
+}
+
+function getSavedFilteredRows() {
+  const term = savedSearchInput.value.trim().toLowerCase();
+
+  return savedRows.filter((row) => {
+    const { query, config } = row;
+    const matchesTerm = term
+      ? query.name.toLowerCase().includes(term) ||
+        (query.description && query.description.toLowerCase().includes(term)) ||
+        query.dbType.toLowerCase().includes(term) ||
+        (config && config.dbName && config.dbName.toLowerCase().includes(term))
+      : true;
+    return matchesTerm;
+  });
+}
+
+function renderSavedTable(rows) {
+  const term = savedSearchInput.value.trim().toLowerCase();
+
+  savedQueryTableBody.innerHTML = "";
+
+  savedSearchCount.textContent =
+    rows.length === savedRows.length
+      ? `${savedRows.length} rows total`
+      : `Showing ${rows.length} of ${savedRows.length} rows`;
+
+  if (rows.length === 0) {
+    savedTableWrapper.style.display = "none";
+    savedEmptyState.style.display = "block";
+    savedEmptyState.textContent = term
       ? `No queries match "${term}".`
-      : "No queries saved yet. Add one above.";
+      : "No queries saved yet. Add one on Query Management.";
     return;
   }
 
-  emptyState.style.display = "none";
-  tableWrapper.style.display = "block";
+  savedEmptyState.style.display = "none";
+  savedTableWrapper.style.display = "block";
 
-  queries.forEach((query, index) => {
+  rows.forEach((rowData, index) => {
+    const { query, config } = rowData;
     const createdAt = query.createdAt
       ? new Date(query.createdAt).toLocaleString()
       : "-";
@@ -371,12 +436,14 @@ function renderTable(queries) {
         : query.description
       : '<span style="color:#999;">-</span>';
 
-    const row = document.createElement("tr");
-    row.innerHTML = `
+    const rowEl = document.createElement("tr");
+    rowEl.className = "saved-query-row";
+    rowEl.innerHTML = `
       <td>${index + 1}</td>
       <td><strong>${highlightedName}</strong></td>
       <td>${description}</td>
       <td><span class="badge badge-info">${query.dbType}</span></td>
+      <td>${config ? config.dbName : "<span style='color:#999;'>No connection</span>"}</td>
       <td>
         <code style="
           background:#f0f2f5;
@@ -387,69 +454,33 @@ function renderTable(queries) {
         ">${preview}</code>
       </td>
       <td>${createdAt}</td>
-      <td></td>
+      <td>
+        <button class="btn btn-success run-btn" style="padding:6px 14px;font-size:12px;">
+          Run
+        </button>
+      </td>
     `;
 
-    const deleteBtn = document.createElement("button");
-    deleteBtn.className = "btn btn-danger";
-    deleteBtn.style.padding = "6px 14px";
-    deleteBtn.style.fontSize = "12px";
-    deleteBtn.textContent = "Delete";
-    deleteBtn.addEventListener("click", () =>
-      handleDelete(query.queryId, query.name)
+    rowEl.addEventListener("click", () => handleSavedRowRun(rowData));
+    savedQueryTableBody.appendChild(rowEl);
+  });
+}
+
+function handleSavedRowRun(row) {
+  hideSavedAlert();
+
+  if (!row.config) {
+    showSavedAlert(
+      `No execution connection available for ${row.query.dbType}.`,
+      "alert-info"
     );
-
-    row.querySelector("td:last-child").appendChild(deleteBtn);
-    queryTableBody.appendChild(row);
-  });
-}
-
-async function handleDelete(id, name) {
-  if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
-
-  try {
-    const response = await deleteQuery(id);
-
-    if (response.ok || response.status === 204) {
-      showAlert(tableAlert, `Query "${name}" deleted successfully.`, "alert-success");
-      await loadQueries();
-    } else {
-      const result = await response.json();
-      showAlert(tableAlert, result.error || "Failed to delete.", "alert-error");
-    }
-  } catch (err) {
-    showAlert(tableAlert, "Something went wrong while deleting.", "alert-error");
+    return;
   }
-}
 
-function getFilteredQueries() {
-  const term = searchInput.value.trim().toLowerCase();
-  const typeFilter = filterDbType.value;
-
-  return allQueries.filter((q) => {
-    const matchesType = typeFilter ? q.dbType === typeFilter : true;
-    const matchesTerm = term
-      ? q.name.toLowerCase().includes(term) ||
-        (q.description && q.description.toLowerCase().includes(term))
-      : true;
-    return matchesType && matchesTerm;
-  });
-}
-
-async function loadQueries() {
-  tableSpinner.classList.add("show");
-  tableWrapper.style.display = "none";
-  emptyState.style.display = "none";
-  hideAlert(tableAlert);
-
-  try {
-    allQueries = await getAllQueries();
-    renderTable(getFilteredQueries());
-  } catch (err) {
-    showAlert(tableAlert, "Failed to load queries.", "alert-error");
-  } finally {
-    tableSpinner.classList.remove("show");
-  }
+  const url = `/query-results?queryId=${encodeURIComponent(
+    row.query.queryId
+  )}&configId=${encodeURIComponent(row.config.configId)}&pageSize=50`;
+  window.location.href = url;
 }
 
 function generateSQL() {
@@ -668,14 +699,13 @@ export function initQueryManagementPage() {
   testRunNextBtnEl = document.getElementById("testRunNextBtn");
   testRunPageInfoEl = document.getElementById("testRunPageInfo");
 
-  tableAlert = document.getElementById("tableAlert");
-  tableSpinner = document.getElementById("tableSpinner");
-  queryTableBody = document.getElementById("queryTableBody");
-  emptyState = document.getElementById("emptyState");
-  tableWrapper = document.getElementById("tableWrapper");
-  filterDbType = document.getElementById("filterDbType");
-  searchInput = document.getElementById("searchInput");
-  searchCount = document.getElementById("searchCount");
+  savedSearchInput = document.getElementById("savedSearchInput");
+  savedTableAlert = document.getElementById("savedTableAlert");
+  savedTableSpinner = document.getElementById("savedTableSpinner");
+  savedTableWrapper = document.getElementById("savedTableWrapper");
+  savedQueryTableBody = document.getElementById("savedQueryTableBody");
+  savedEmptyState = document.getElementById("savedEmptyState");
+  savedSearchCount = document.getElementById("savedSearchCount");
 
   builderToggle = document.getElementById("builderToggle");
   builderBody = document.getElementById("builderBody");
@@ -697,8 +727,34 @@ export function initQueryManagementPage() {
   builderStep4 = document.getElementById("builderStep4");
   builderStep5 = document.getElementById("builderStep5");
   builderStep6 = document.getElementById("builderStep6");
+  queryModalOverlay = document.getElementById("queryModalOverlay");
+  openQueryModalBtn = document.getElementById("openQueryModalBtn");
+  queryModalCloseBtn = document.getElementById("queryModalCloseBtn");
 
   if (!queryNameInput) return;
+
+  if (openQueryModalBtn && queryModalOverlay) {
+    openQueryModalBtn.addEventListener("click", () => {
+      queryModalOverlay.classList.add("is-open");
+      document.body.style.overflow = "hidden";
+    });
+  }
+
+  if (queryModalCloseBtn && queryModalOverlay) {
+    queryModalCloseBtn.addEventListener("click", () => {
+      queryModalOverlay.classList.remove("is-open");
+      document.body.style.overflow = "";
+    });
+  }
+
+  if (queryModalOverlay) {
+    queryModalOverlay.addEventListener("click", (event) => {
+      if (event.target === queryModalOverlay) {
+        queryModalOverlay.classList.remove("is-open");
+        document.body.style.overflow = "";
+      }
+    });
+  }
 
   [queryNameInput, descriptionInput, queryTextArea].forEach((el) => {
     el.addEventListener("input", () => {
@@ -890,7 +946,11 @@ export function initQueryManagementPage() {
           "alert-success"
         );
         resetForm();
-        await loadQueries();
+        await loadSavedQueries();
+        if (queryModalOverlay) {
+          queryModalOverlay.classList.remove("is-open");
+          document.body.style.overflow = "";
+        }
       } else {
         const message =
           result.error || result.message || "Failed to save query.";
@@ -922,13 +982,11 @@ export function initQueryManagementPage() {
     clearFormState();
   }
 
-  searchInput.addEventListener("input", () => {
-    renderTable(getFilteredQueries());
-  });
-
-  filterDbType.addEventListener("change", () => {
-    renderTable(getFilteredQueries());
-  });
+  if (savedSearchInput) {
+    savedSearchInput.addEventListener("input", () => {
+      renderSavedTable(getSavedFilteredRows());
+    });
+  }
 
   builderDbTypeEl.addEventListener("change", async () => {
     builderSelectedDbType = builderDbTypeEl.value;
@@ -1070,7 +1128,7 @@ export function initQueryManagementPage() {
     restoreFormState();
     await loadDbTypes();
     await restoreBuilderState();
-    await loadQueries();
+    await loadSavedQueries();
   }
 
   init();

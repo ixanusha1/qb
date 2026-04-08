@@ -8,7 +8,12 @@ export default function QueryManagementPage() {
 
   return (
     <div className="container">
-      <h1 className="page-title">Query Management</h1>
+      <div className="page-title-row">
+        <h1 className="page-title">Query Management</h1>
+        <button className="btn btn-success" id="openQueryModalBtn">
+          ADD
+        </button>
+      </div>
 
       <div className="card">
         <div className="builder-toggle" id="builderToggle">
@@ -132,114 +137,122 @@ export default function QueryManagementPage() {
         </div>
       </div>
 
-      <div className="card">
-        <h2 className="card-title">Add New Query</h2>
-        <div id="formAlert" className="alert"></div>
-
-        <div className="form-row form-row-3">
-          <div className="form-group">
-            <label htmlFor="queryName">Query Name</label>
-            <input
-              type="text"
-              id="queryName"
-              placeholder="e.g. All Employees"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="dbType">Database Type</label>
-            <select id="dbType">
-              <option value="">-- Select Type --</option>
-            </select>
-          </div>
-          <div
-            className="form-group"
-            id="testConnectionGroup"
-            style={{ display: "none" }}
-          >
-            <label htmlFor="testConnection">
-              Test Connection
-              <span className="form-hint">- required for test run</span>
-            </label>
-            <select id="testConnection">
-              <option value="">-- Select Connection --</option>
-            </select>
-          </div>
-        </div>
-        <div className="form-group">
-          <label htmlFor="description">Description</label>
-          <textarea
-            id="description"
-            rows="3"
-            placeholder="e.g. Fetches all records from employees table"
-          ></textarea>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="queryText">SQL Query</label>
-          <textarea
-            id="queryText"
-            rows="5"
-            placeholder="e.g. SELECT * FROM employees"
-          ></textarea>
-        </div>
-
-        <div className="btn-group">
-          <button className="btn btn-success fade-toggle" id="testRunBtn" disabled>
-            Run Test
-          </button>
-          <button className="btn btn-secondary fade-toggle" id="clearBtn">
-            Clear
-          </button>
-        </div>
-
-        <div className="test-run-area" id="testRunArea" style={{ display: "none" }}>
-          <div className="test-run-title">Test Run Results</div>
-
-          <div id="testRunAlert" className="alert"></div>
-          <div id="testRunSpinner" className="spinner">
-            Running test query...
-          </div>
-
-          <div className="test-run-summary" id="testRunSummary"></div>
-
-          <div
-            className="table-wrapper"
-            id="testRunTableWrapper"
-            style={{ display: "none" }}
-          >
-            <table>
-              <thead id="testRunTableHead"></thead>
-              <tbody id="testRunTableBody"></tbody>
-            </table>
-          </div>
-
-          <div
-            id="testRunEmptyState"
-            className="empty-state"
-            style={{ display: "none" }}
-          >
-            Query returned no results.
-          </div>
-
-          <div
-            className="pagination"
-            id="testRunPagination"
-            style={{ display: "none" }}
-          >
-            <button id="testRunPrevBtn" disabled>
-              Prev
+      <div className="modal-overlay" id="queryModalOverlay">
+        <div className="modal-card query-modal">
+          <div className="modal-header">
+            <h3 className="modal-title">Add New Query</h3>
+            <button className="modal-close" id="queryModalCloseBtn">
+              x
             </button>
-            <span id="testRunPageInfo"></span>
-            <button id="testRunNextBtn">Next</button>
           </div>
 
-          <div className="btn-group" style={{ marginTop: 12 }}>
-            <button
-              className="btn btn-primary fade-toggle is-hidden"
-              id="saveQueryBtn"
+          <div id="formAlert" className="alert"></div>
+
+          <div className="form-row form-row-3">
+            <div className="form-group">
+              <label htmlFor="queryName">Query Name</label>
+              <input
+                type="text"
+                id="queryName"
+                placeholder="e.g. All Employees"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="dbType">Database Type</label>
+              <select id="dbType">
+                <option value="">-- Select Type --</option>
+              </select>
+            </div>
+            <div
+              className="form-group"
+              id="testConnectionGroup"
+              style={{ display: "none" }}
             >
-              Save Query
+              <label htmlFor="testConnection">
+                Test Connection
+                <span className="form-hint">- required for test run</span>
+              </label>
+              <select id="testConnection">
+                <option value="">-- Select Connection --</option>
+              </select>
+            </div>
+          </div>
+          <div className="form-group">
+            <label htmlFor="description">Description</label>
+            <textarea
+              id="description"
+              rows="3"
+              placeholder="e.g. Fetches all records from employees table"
+            ></textarea>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="queryText">SQL Query</label>
+            <textarea
+              id="queryText"
+              rows="5"
+              placeholder="e.g. SELECT * FROM employees"
+            ></textarea>
+          </div>
+
+          <div className="btn-group">
+            <button className="btn btn-success fade-toggle" id="testRunBtn" disabled>
+              Run Test
             </button>
+            <button className="btn btn-secondary fade-toggle" id="clearBtn">
+              Clear
+            </button>
+          </div>
+
+          <div className="test-run-area" id="testRunArea" style={{ display: "none" }}>
+            <div className="test-run-title">Test Run Results</div>
+
+            <div id="testRunAlert" className="alert"></div>
+            <div id="testRunSpinner" className="spinner">
+              Running test query...
+            </div>
+
+            <div className="test-run-summary" id="testRunSummary"></div>
+
+            <div
+              className="table-wrapper"
+              id="testRunTableWrapper"
+              style={{ display: "none" }}
+            >
+              <table>
+                <thead id="testRunTableHead"></thead>
+                <tbody id="testRunTableBody"></tbody>
+              </table>
+            </div>
+
+            <div
+              id="testRunEmptyState"
+              className="empty-state"
+              style={{ display: "none" }}
+            >
+              Query returned no results.
+            </div>
+
+            <div
+              className="pagination"
+              id="testRunPagination"
+              style={{ display: "none" }}
+            >
+              <button id="testRunPrevBtn" disabled>
+                Prev
+              </button>
+              <span id="testRunPageInfo"></span>
+              <button id="testRunNextBtn">Next</button>
+            </div>
+
+            <div className="btn-group" style={{ marginTop: 12 }}>
+              <button
+                className="btn btn-primary fade-toggle is-hidden"
+                id="saveQueryBtn"
+              >
+                Save Query
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -247,32 +260,30 @@ export default function QueryManagementPage() {
       <div className="card">
         <h2 className="card-title">Saved Queries</h2>
 
-        <div className="saved-filter-row">
+        <div className="saved-queries-row">
           <div className="search-wrapper saved-search">
             <span className="search-icon">S</span>
             <input
               type="text"
-              id="searchInput"
-              placeholder="Search by name or description..."
+              id="savedSearchInput"
+              placeholder="Search by name, description, DB type, or connection..."
               autoComplete="off"
             />
           </div>
-          <div className="form-group saved-filter">
-            <label htmlFor="filterDbType">Filter by DB Type</label>
-            <select id="filterDbType">
-              <option value="">-- All Types --</option>
-            </select>
-          </div>
         </div>
 
-        <div className="search-count" id="searchCount"></div>
+        <div className="search-count" id="savedSearchCount"></div>
 
-        <div id="tableAlert" className="alert"></div>
-        <div id="tableSpinner" className="spinner">
+        <div id="savedTableAlert" className="alert"></div>
+        <div id="savedTableSpinner" className="spinner">
           Loading queries...
         </div>
 
-        <div className="table-wrapper" id="tableWrapper" style={{ display: "none" }}>
+        <div
+          className="table-wrapper"
+          id="savedTableWrapper"
+          style={{ display: "none" }}
+        >
           <table>
             <thead>
               <tr>
@@ -280,16 +291,21 @@ export default function QueryManagementPage() {
                 <th>Name</th>
                 <th>Description</th>
                 <th>DB Type</th>
+                <th>Execution Connection</th>
                 <th>Query Preview</th>
                 <th>Created At</th>
                 <th>Action</th>
               </tr>
             </thead>
-            <tbody id="queryTableBody"></tbody>
+            <tbody id="savedQueryTableBody"></tbody>
           </table>
         </div>
 
-        <div id="emptyState" className="empty-state" style={{ display: "none" }}>
+        <div
+          id="savedEmptyState"
+          className="empty-state"
+          style={{ display: "none" }}
+        >
           No queries found.
         </div>
       </div>

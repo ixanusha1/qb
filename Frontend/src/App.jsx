@@ -1,21 +1,166 @@
-import React, { useEffect } from "react";
-import { NavLink, Route, Routes } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
 import DbConfigPage from "./pages/DbConfigPage.jsx";
 import QueryManagementPage from "./pages/QueryManagementPage.jsx";
 import QueryExecutionPage from "./pages/QueryExecutionPage.jsx";
 import QueryResultsPage from "./pages/QueryResultsPage.jsx";
 import AuditLogsPage from "./pages/AuditLogsPage.jsx";
 import { initScratchpad } from "./legacy/scratchpad.js";
+import { getAllDbConfigs, getAllQueries } from "./legacy/api.js";
 
 function Navbar() {
   const linkClass = ({ isActive }) =>
     isActive ? "active" : undefined;
+  const navigate = useNavigate();
+
+  const [savedQueries, setSavedQueries] = useState([]);
+  const [configsById, setConfigsById] = useState(new Map());
+  const [showAllQueries, setShowAllQueries] = useState(false);
+  const [sidebarSearch, setSidebarSearch] = useState("");
+
+  const sortedQueries = useMemo(() => {
+    return [...savedQueries].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+    );
+  }, [savedQueries]);
+
+  const filteredQueries = useMemo(() => {
+    const term = sidebarSearch.trim().toLowerCase();
+    if (!term) return sortedQueries;
+
+    return sortedQueries.filter((query) => {
+      const config = query.configId ? configsById.get(query.configId) : null;
+      return [
+        query.name,
+        query.description,
+        query.dbType,
+        query.queryText,
+        config?.dbName,
+        config?.databaseName,
+        config?.host
+      ].some((value) => value && value.toLowerCase().includes(term));
+    });
+  }, [configsById, savedQueries, sidebarSearch, sortedQueries]);
+
+  const visibleQueries = useMemo(() => {
+    return showAllQueries ? filteredQueries : filteredQueries.slice(0, 7);
+  }, [filteredQueries, showAllQueries]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSavedQueries() {
+      try {
+        const [queries, configs] = await Promise.all([
+          getAllQueries(),
+          getAllDbConfigs()
+        ]);
+        if (!isMounted) return;
+        setSavedQueries(Array.isArray(queries) ? queries : []);
+        const map = new Map();
+        if (Array.isArray(configs)) {
+          configs.forEach((config) => map.set(config.configId, config));
+        }
+        setConfigsById(map);
+      } catch (err) {
+        if (!isMounted) return;
+        setSavedQueries([]);
+        setConfigsById(new Map());
+      }
+    }
+
+    loadSavedQueries();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const runSavedQuery = async (query) => {
+    if (!query?.configId) {
+      return;
+    }
+    navigate(`/query-results?queryId=${query.queryId}&configId=${query.configId}&pageSize=50`);
+  };
 
   return (
     <nav className="sidebar">
       <NavLink to="/" className="brand">
         Query Tool
       </NavLink>
+      <div className="sidebar-queries">
+        <div className="sidebar-section-title">Saved Queries</div>
+        <div className="sidebar-search">
+          <input
+            type="text"
+            value={sidebarSearch}
+            onChange={(event) => setSidebarSearch(event.target.value)}
+            placeholder="Search queries..."
+          />
+        </div>
+        <div className="sidebar-query-list">
+          {filteredQueries.length === 0 ? (
+            <div className="sidebar-empty">No saved queries</div>
+          ) : (
+            visibleQueries.map((query) => {
+              const config = query.configId ? configsById.get(query.configId) : null;
+              const createdAt = query.createdAt
+                ? new Date(query.createdAt).toLocaleDateString()
+                : "N/A";
+
+              return (
+                <div
+                  key={query.queryId}
+                  className="sidebar-query-item"
+                  title={query.name}
+                >
+                  <div className="sidebar-query-header">
+                    <button
+                      type="button"
+                      className="sidebar-query-name"
+                      onClick={() => runSavedQuery(query)}
+                    >
+                      {query.name}
+                    </button>
+                    <button
+                      type="button"
+                      className="sidebar-run-btn"
+                      onClick={() => runSavedQuery(query)}
+                    >
+                      Run
+                    </button>
+                  </div>
+                  <div className="sidebar-query-meta">
+                    <span>Type: {query.dbType || "No DB type"}</span>
+                    <span>Config: {config?.dbName || "No DB config"}</span>
+                    <span>DB: {config?.databaseName || "Not linked"}</span>
+                    <span>Host: {config?.host || "Not linked"}{config?.port ? `:${config.port}` : ""}</span>
+                    <span>Created: {createdAt}</span>
+                  </div>
+                  <div className="sidebar-query-subtext">
+                    {query.description || "No description"}
+                  </div>
+                  <div className="sidebar-query-subtext">
+                    Query ID: {query.queryId}
+                  </div>
+                  <div className="sidebar-query-preview">
+                    {query.queryText || "No SQL preview available"}
+                  </div>
+                </div>
+              );
+            })
+          )}
+          {filteredQueries.length > 7 ? (
+            <button
+              type="button"
+              className="sidebar-query-more"
+              onClick={() => setShowAllQueries((prev) => !prev)}
+              aria-expanded={showAllQueries}
+            >
+              {showAllQueries ? "Hide" : "..."}
+            </button>
+          ) : null}
+        </div>
+      </div>
       <ul className="nav-links">
         <li>
           <NavLink to="/" className={linkClass} end>
@@ -24,12 +169,7 @@ function Navbar() {
         </li>
         <li>
           <NavLink to="/queries" className={linkClass}>
-            Queries
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/execute" className={linkClass}>
-            Execute
+            Report Config
           </NavLink>
         </li>
         <li>
@@ -38,6 +178,7 @@ function Navbar() {
           </NavLink>
         </li>
       </ul>
+
     </nav>
   );
 }

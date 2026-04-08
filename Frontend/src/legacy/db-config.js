@@ -1,6 +1,7 @@
 import {
   deleteDbConfig,
   getAllDbConfigs,
+  getConfigsByDbType,
   saveDbConfig,
   testConnection
 } from "./api.js";
@@ -21,6 +22,35 @@ let tableSpinner;
 let configTableBody;
 let emptyState;
 let tableWrapper;
+let configModalOverlay;
+let openConfigModalBtn;
+let configModalCloseBtn;
+const DB_CONFIG_FORM_STATE_KEY = "db_config_form_state";
+const DB_CONFIG_MODAL_OPEN_KEY = "db_config_modal_open";
+
+const DB_TYPE_DEFAULTS = {
+  MSSQL: {
+    dbName: "MSSQL Connection",
+    host: "localhost",
+    port: "1433",
+    databaseName: "master",
+    username: "sa"
+  },
+  MYSQL: {
+    dbName: "MySQL Connection",
+    host: "localhost",
+    port: "3306",
+    databaseName: "mysql",
+    username: "root"
+  },
+  POSTGRESQL: {
+    dbName: "PostgreSQL Connection",
+    host: "localhost",
+    port: "5432",
+    databaseName: "postgres",
+    username: "postgres"
+  }
+};
 
 function showAlert(element, message, type) {
   element.textContent = message;
@@ -65,6 +95,135 @@ function resetForm() {
   passwordInput.value = "";
   connectionTested = false;
   saveBtn.disabled = true;
+  clearPersistedFormState();
+}
+
+function applyConfigValues(config, { preserveDbName = false } = {}) {
+  if (!config) return;
+
+  if (!preserveDbName || !dbNameInput.value.trim()) {
+    dbNameInput.value = config.dbName || "";
+  }
+  hostInput.value = config.host || "";
+  portInput.value = config.port || "";
+  dbNameInput2.value = config.databaseName || "";
+  usernameInput.value = config.username || "";
+  passwordInput.value = "";
+  persistFormState();
+}
+
+function applyDefaultsForType(dbType) {
+  const defaults = DB_TYPE_DEFAULTS[dbType];
+  if (!defaults) return;
+
+  applyConfigValues(defaults);
+}
+
+function getLatestConfig(configs) {
+  return [...configs].sort((a, b) => {
+    const aTime = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bTime = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return bTime - aTime;
+  })[0];
+}
+
+async function autofillByDbType(dbType) {
+  connectionTested = false;
+  saveBtn.disabled = true;
+  hideAlert(formAlert);
+
+  if (!dbType) {
+    hostInput.value = "";
+    portInput.value = "";
+    dbNameInput2.value = "";
+    usernameInput.value = "";
+    passwordInput.value = "";
+    persistFormState();
+    return;
+  }
+
+  applyDefaultsForType(dbType);
+
+  try {
+    const configs = await getConfigsByDbType(dbType);
+    if (Array.isArray(configs) && configs.length > 0) {
+      applyConfigValues(getLatestConfig(configs), { preserveDbName: true });
+      showAlert(
+        formAlert,
+        "Details loaded from the latest saved configuration for this database type. Enter the password and test the connection.",
+        "alert-info"
+      );
+      return;
+    }
+  } catch (err) {
+    // No saved config for this DB type; keep local defaults.
+  }
+
+  showAlert(
+    formAlert,
+    "Default connection details loaded for the selected database type. Enter the password and test the connection.",
+    "alert-info"
+  );
+}
+
+function getPersistedFormState() {
+  try {
+    const raw = sessionStorage.getItem(DB_CONFIG_FORM_STATE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function persistFormState() {
+  const state = {
+    dbName: dbNameInput.value,
+    dbType: dbTypeSelect.value,
+    host: hostInput.value,
+    port: portInput.value,
+    databaseName: dbNameInput2.value,
+    username: usernameInput.value,
+    password: passwordInput.value
+  };
+
+  sessionStorage.setItem(DB_CONFIG_FORM_STATE_KEY, JSON.stringify(state));
+}
+
+function restoreFormState() {
+  const state = getPersistedFormState();
+  if (!state) return;
+
+  dbNameInput.value = state.dbName || "";
+  dbTypeSelect.value = state.dbType || "";
+  hostInput.value = state.host || "";
+  portInput.value = state.port || "";
+  dbNameInput2.value = state.databaseName || "";
+  usernameInput.value = state.username || "";
+  passwordInput.value = state.password || "";
+}
+
+function clearPersistedFormState() {
+  sessionStorage.removeItem(DB_CONFIG_FORM_STATE_KEY);
+}
+
+function persistModalOpenState(isOpen) {
+  if (isOpen) {
+    sessionStorage.setItem(DB_CONFIG_MODAL_OPEN_KEY, "true");
+  } else {
+    sessionStorage.removeItem(DB_CONFIG_MODAL_OPEN_KEY);
+  }
+}
+
+function openConfigModal() {
+  configModalOverlay.classList.add("is-open");
+  document.body.style.overflow = "hidden";
+  persistModalOpenState(true);
+}
+
+function closeConfigModal() {
+  configModalOverlay.classList.remove("is-open");
+  document.body.style.overflow = "";
+  persistModalOpenState(false);
 }
 
 async function loadConfigs() {
@@ -164,8 +323,27 @@ export function initDbConfigPage() {
   configTableBody = document.getElementById("configTableBody");
   emptyState = document.getElementById("emptyState");
   tableWrapper = document.getElementById("tableWrapper");
+  configModalOverlay = document.getElementById("configModalOverlay");
+  openConfigModalBtn = document.getElementById("openConfigModalBtn");
+  configModalCloseBtn = document.getElementById("configModalCloseBtn");
 
   if (!dbNameInput) return;
+
+  if (openConfigModalBtn && configModalOverlay) {
+    openConfigModalBtn.addEventListener("click", openConfigModal);
+  }
+
+  if (configModalCloseBtn && configModalOverlay) {
+    configModalCloseBtn.addEventListener("click", closeConfigModal);
+  }
+
+  if (configModalOverlay) {
+    configModalOverlay.addEventListener("click", (event) => {
+      if (event.target === configModalOverlay) {
+        closeConfigModal();
+      }
+    });
+  }
 
   [
     dbNameInput,
@@ -180,7 +358,13 @@ export function initDbConfigPage() {
       connectionTested = false;
       saveBtn.disabled = true;
       hideAlert(formAlert);
+      persistFormState();
     });
+  });
+
+  dbTypeSelect.addEventListener("change", (event) => {
+    autofillByDbType(event.target.value.trim());
+    persistFormState();
   });
 
   testBtn.addEventListener("click", async () => {
@@ -207,6 +391,7 @@ export function initDbConfigPage() {
         );
         connectionTested = true;
         saveBtn.disabled = false;
+        persistFormState();
       } else {
         showAlert(
           formAlert,
@@ -251,6 +436,9 @@ export function initDbConfigPage() {
         showAlert(formAlert, "Configuration saved successfully.", "alert-success");
         resetForm();
         loadConfigs();
+        if (configModalOverlay) {
+          closeConfigModal();
+        }
       } else {
         const message = result.error || "Failed to save configuration.";
         showAlert(formAlert, message, "alert-error");
@@ -262,6 +450,11 @@ export function initDbConfigPage() {
       saveBtn.textContent = "Save Configuration";
     }
   });
+
+  restoreFormState();
+  if (sessionStorage.getItem(DB_CONFIG_MODAL_OPEN_KEY) === "true") {
+    openConfigModal();
+  }
 
   loadConfigs();
 }
